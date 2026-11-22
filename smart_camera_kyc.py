@@ -1,13 +1,21 @@
+import os
 import time
 import random
+import urllib.request
 import cv2
 import numpy as np
 import sounddevice as sd
 import mediapipe as mp
+from mediapipe.tasks import python as mp_python
+from mediapipe.tasks.python import vision as mp_vision
 import easyocr
 
 from languages import VoiceEngine
 from security_vault import SecurityVault
+
+
+MODEL_URL = "https://googleapis.com"
+MODEL_PATH = "face_landmarker.task"
 
 
 class SmartCameraKYC:
@@ -16,13 +24,18 @@ class SmartCameraKYC:
         self.voice = VoiceEngine(lang=lang)
         self.vault = SecurityVault()
 
-        self.mp_face_mesh = mp.solutions.face_mesh
-        self.face_mesh = self.mp_face_mesh.FaceMesh(
-            max_num_faces=1,
-            refine_landmarks=True,
-            min_detection_confidence=0.6,
+        if not os.path.exists(MODEL_PATH):
+            print("Downloading offline FaceLandmarker model (3.7 MB)...")
+            urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+
+        base_options = mp_python.BaseOptions(model_asset_path=MODEL_PATH)
+        options = mp_vision.FaceLandmarkerOptions(
+            base_options=base_options,
+            num_faces=1,
+            min_face_detection_confidence=0.6,
             min_tracking_confidence=0.6
         )
+        self.landmarker = mp_vision.FaceLandmarker.create_from_options(options)
         self.ocr_reader = None
 
     def check_ambient_noise(self, duration=1.5, sample_rate=16000, threshold_db=68.0):
@@ -49,8 +62,8 @@ class SmartCameraKYC:
         return round(float(decibels), 1), is_noisy
 
     def _get_lip_gap(self, landmarks):
-        upper_inner_lip = landmarks
-        lower_inner_lip = landmarks
+        upper_inner_lip = landmarks[13]
+        lower_inner_lip = landmarks[14]
         return abs(lower_inner_lip.y - upper_inner_lip.y)
 
     def run_face_and_liveness(self, cap):
@@ -73,13 +86,14 @@ class SmartCameraKYC:
 
             frame = cv2.flip(frame, 1)
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = self.face_mesh.process(rgb_frame)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+            results = self.landmarker.detect(mp_image)
 
-            if results.multi_face_landmarks:
-                landmarks = results.multi_face_landmarks.landmark
-                nose = landmarks
-                left_cheek = landmarks
-                right_cheek = landmarks
+            if results.face_landmarks:
+                landmarks = results.face_landmarks[0]
+                nose = landmarks[1]
+                left_cheek = landmarks[234]
+                right_cheek = landmarks[454]
 
                 face_width = abs(right_cheek.x - left_cheek.x)
 
@@ -226,6 +240,7 @@ class SmartCameraKYC:
         finally:
             cap.release()
             cv2.destroyAllWindows()
+            self.landmarker.close()
             self.voice.stop()
 
 
