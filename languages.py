@@ -154,8 +154,15 @@ class VoiceEngine:
             self.last_spoken_key = None
 
     def _speech_worker(self):
+        try:
+            import ctypes
+            ctypes.windll.ole32.CoInitialize(None)
+        except Exception:
+            pass
+
         engine = pyttsx3.init()
         engine.setProperty("rate", self.rate)
+
 
         while self.is_running:
             try:
