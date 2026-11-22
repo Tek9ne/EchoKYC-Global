@@ -1,21 +1,12 @@
-import os
 import time
 import random
-import urllib.request
 import cv2
 import numpy as np
 import sounddevice as sd
-import mediapipe as mp
-from mediapipe.tasks import python as mp_python
-from mediapipe.tasks.python import vision as mp_vision
 import easyocr
 
 from languages import VoiceEngine
 from security_vault import SecurityVault
-
-
-MODEL_URL = "https://googleapis.com"
-MODEL_PATH = "face_landmarker.task"
 
 
 class SmartCameraKYC:
@@ -24,19 +15,14 @@ class SmartCameraKYC:
         self.voice = VoiceEngine(lang=lang)
         self.vault = SecurityVault()
 
-        if not os.path.exists(MODEL_PATH):
-            print("Downloading offline FaceLandmarker model (3.7 MB)...")
-            urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
-
-        base_options = mp_python.BaseOptions(model_asset_path=MODEL_PATH)
-        options = mp_vision.FaceLandmarkerOptions(
-            base_options=base_options,
-            num_faces=1,
-            min_face_detection_confidence=0.6,
-            min_tracking_confidence=0.6
+        self.face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
         )
-        self.landmarker = mp_vision.FaceLandmarker.create_from_options(options)
+        self.mouth_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_smile.xml"
+        )
         self.ocr_reader = None
+        print("[CAMERA ENGINE]: 100% Offline OpenCV Face & Lip Engine Ready.")
 
     def check_ambient_noise(self, duration=1.5, sample_rate=16000, threshold_db=68.0):
         try:
@@ -61,10 +47,26 @@ class SmartCameraKYC:
         time.sleep(3.5)
         return round(float(decibels), 1), is_noisy
 
-    def _get_lip_gap(self, landmarks):
-        upper_inner_lip = landmarks[13]
-        lower_inner_lip = landmarks[14]
-        return abs(lower_inner_lip.y - upper_inner_lip.y)
+    def _detect_face_and_mouth(self, frame):
+        h, w, _ = frame.shape
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = self.face_cascade.detectMultiScale(
+            gray, scaleFactor=1.2, minNeighbors=5, minSize=(100, 100)
+        )
+        if len(faces) == 0:
+            return None
+
+        fx, fy, fw, fh = faces[0]
+        nose_x = (fx + fw / 2.0) / w
+        face_width = fw / float(w)
+
+        lower_face = gray[fy + int(fh * 0.55):fy + fh, fx:fx + fw]
+        mouths = self.mouth_cascade.detectMultiScale(
+            lower_face, scaleFactor=1.5, minNeighbors=15
+        )
+        is_mouth_open = len(mouths) > 0
+        cv2.rectangle(frame, (fx, fy), (fx + fw, fy + fh), (0, 255, 255), 2)
+        return nose_x, face_width, is_mouth_open
 
     def run_face_and_liveness(self, cap):
         centered_start = None
@@ -85,23 +87,16 @@ class SmartCameraKYC:
                 break
 
             frame = cv2.flip(frame, 1)
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-            results = self.landmarker.detect(mp_image)
+            detection = self._detect_face_and_mouth(frame)
 
-            if results.face_landmarks:
-                landmarks = results.face_landmarks[0]
-                nose = landmarks[1]
-                left_cheek = landmarks[234]
-                right_cheek = landmarks[454]
-
-                face_width = abs(right_cheek.x - left_cheek.x)
+            if detection is not None:
+                nose_x, face_width, currently_open = detection
 
                 if not selfie_captured:
-                    if nose.x < 0.38:
+                    if nose_x < 0.38:
                         self.voice.speak("move_right")
                         centered_start = None
-                    elif nose.x > 0.62:
+                    elif nose_x > 0.62:
                         self.voice.speak("move_left")
                         centered_start = None
                     elif face_width < 0.22:
@@ -128,10 +123,9 @@ class SmartCameraKYC:
                         otp_announced = True
                         time.sleep(2.5)
 
-                    lip_gap = self._get_lip_gap(landmarks)
-                    if lip_gap > 0.028 and not mouth_open:
+                    if currently_open and not mouth_open:
                         mouth_open = True
-                    elif lip_gap < 0.015 and mouth_open:
+                    elif not currently_open and mouth_open:
                         mouth_open = False
                         syllable_count += 1
 
@@ -240,7 +234,6 @@ class SmartCameraKYC:
         finally:
             cap.release()
             cv2.destroyAllWindows()
-            self.landmarker.close()
             self.voice.stop()
 
 
