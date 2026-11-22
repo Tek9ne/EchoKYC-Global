@@ -1,0 +1,17 @@
+{
+    "language_name": "English",
+    "welcome": "Welcome to Echo K Y C Global. Your voice-guided bank assistant is ready.",
+    "noise_high": "The environment is very noisy. Switching to visual lip-tracking mode.",
+    "noise_ok": "Background noise is low. Voice and camera checks are active.",
+    "move_left": "Move your face slightly to the left.",
+    "move_right": "Move your face slightly to the right.",
+    "move_closer": "Move closer to the camera.",
+    "move_back": "Move a little further back from the camera.",
+    "face_centered": "Perfect! Hold steady right there.",
+    "liveness_prompt": "Please say the four-digit code out loud now: {otp}",
+    "liveness_passed": "Liveness verified! Thank you.",
+    "id_scan_start": "Please hold your I D card flat in front of the camera.",
+    "id_blurry": "The image is blurry. Please hold the card steady.",
+    "id_captured": "I D card captured and encrypted safely.",
+    "atm_code": "Your cardless A T M paycode is {code}. It expires in ten minutes."
+}

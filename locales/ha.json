@@ -1,0 +1,17 @@
+{
+    "language_name": "Hausa",
+    "welcome": "Barka da zuwa Echo K Y C Global. Mataimakin banki mai magana ya shirya.",
+    "noise_high": "Wannan wuri yana da hayaniya sosai. Mun koma yanayin duba motsin baki.",
+    "noise_ok": "Wurin yana da shiru. Za mu fara duba fuskar ka yanzu.",
+    "move_left": "Matsar da fuskar ka kadan zuwa hagu.",
+    "move_right": "Matsar da fuskar ka kadan zuwa dama.",
+    "move_closer": "Matsa kusa da kyamara kadan.",
+    "move_back": "Ja baya kadan daga kyamara.",
+    "face_centered": "Ya yi kyau! Tsaya cak a haka.",
+    "liveness_prompt": "Don Allah fadi wadannan lambobi hudu da karfi yanzu: {otp}",
+    "liveness_passed": "Mun tabbatar da kai! Mun gode.",
+    "id_scan_start": "Don Allah rike katin shaidar ka a gaban kyamara.",
+    "id_blurry": "Hoton yana rawa. Rike hannun ka da kyau.",
+    "id_captured": "An dauki hoton katin ka kuma an rufe shi cikin aminci.",
+    "atm_code": "Lambar cirar kudi ta A T M ita ce {code}. Za ta kare nan da minti goma."
+}

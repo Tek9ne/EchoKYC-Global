@@ -1,0 +1,17 @@
+{
+    "language_name": "Igbo",
+    "welcome": "Nnoo na Echo K Y C Global. Onye enyemaka ulo aku gi adila njikere.",
+    "noise_high": "Ebe a na-eme mkpotu nke ukwuu. Anyi agbanweela gaa na nlele egbugbere onu.",
+    "noise_ok": "Ebe a di juu. Ka anyi malite nyocha ihu gi.",
+    "move_left": "Bugharia ihu gi ntakiri gaa n'aka ekpe.",
+    "move_right": "Bugharia ihu gi ntakiri gaa n'aka nri.",
+    "move_closer": "Biaruo nso na kamera ntakiri.",
+    "move_back": "Laghachi azu ntakiri na kamera.",
+    "face_centered": "O di mma! Kwusi otu ahu.",
+    "liveness_prompt": "Biko kpoo onu ogugu ano ndi a n'olu dara uda ugbu a: {otp}",
+    "liveness_passed": "Anyi ekwenyela na o bu gi! Daalu.",
+    "id_scan_start": "Biko jide kaadi njirimara gi kwuro oto n'ihu kamera.",
+    "id_blurry": "Foto a adighi cha mma. Biko jide aka gi otu ebe.",
+    "id_captured": "Anyi eseela kaadi gi ma kpachie ya n'ime igbe nchekwa ulo aku.",
+    "atm_code": "Koodu A T M gi bu {code}. O ga-agwu n'ime nkeji iri."
+}

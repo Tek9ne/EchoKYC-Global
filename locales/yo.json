@@ -1,0 +1,17 @@
+{
+    "language_name": "Yoruba",
+    "welcome": "Kaabo si Echo K Y C Global. Oluranlowo banki olohun re ti setan.",
+    "noise_high": "Ariwo po ni ibi yii. A ti yipada si eto ti o n wo bi ete re se n sise.",
+    "noise_ok": "Ibi yii dake jeje. E je ki a bere ayewo oju re.",
+    "move_left": "Sun oju re die si apa osi.",
+    "move_right": "Sun oju re die si apa otun.",
+    "move_closer": "Sun mo kamera die si i.",
+    "move_back": "Feyin seyin die kuro lara kamera.",
+    "face_centered": "O dara gan! Duro je be yen.",
+    "liveness_prompt": "Jowo pe awon nomba merin wonyi soke bayii: {otp}",
+    "liveness_passed": "A ti rii daju pe eniyan gidi ni o! O seun.",
+    "id_scan_start": "Jowo mu kaadi idanimo re duro dede niwaju kamera.",
+    "id_blurry": "Aworan naa ko mo kedere. Jowo mu owo re duro je.",
+    "id_captured": "A ti ya aworan kaadi re a si ti fi pamo sinu apo aabo banki.",
+    "atm_code": "Nomba igbowo A T M re ni {code}. Yio pari laarin iseju mewa."
+}

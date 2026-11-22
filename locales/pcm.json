@@ -1,0 +1,17 @@
+{
+    "language_name": "Nigerian Pidgin",
+    "welcome": "Welcome to Echo K Y C Global. Your talking bank helper don ready.",
+    "noise_high": "Dis place noisy well well. I don switch to lip-tracking mode so noise no go disturb us.",
+    "noise_ok": "Dis place quiet well. Make we start your face check.",
+    "move_left": "Shift your face small go left.",
+    "move_right": "Shift your face small go right.",
+    "move_closer": "Come close to di camera small.",
+    "move_back": "Step back small from di camera.",
+    "face_centered": "Correct! Stay still like dat.",
+    "liveness_prompt": "Abeg call dis four numbers loud now: {otp}",
+    "liveness_passed": "We don confirm say na real human being! Well done.",
+    "id_scan_start": "Abeg hold your I D card straight for front of di camera.",
+    "id_blurry": "Di picture dey shake. Hold your hand steady small.",
+    "id_captured": "We don snap your I D card and lock am inside bank safe.",
+    "atm_code": "Your cardless A T M code na {code}. E go expire after ten minutes."
+}

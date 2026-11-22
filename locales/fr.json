@@ -1,0 +1,17 @@
+{
+    "language_name": "French",
+    "welcome": "Bienvenue sur Echo K Y C Global. Votre assistant bancaire vocal est prêt.",
+    "noise_high": "L'environnement est très bruyant. Passage au mode visuel de suivi des lèvres.",
+    "noise_ok": "Le bruit ambiant est faible. Vérification vocale et caméra activée.",
+    "move_left": "Déplacez légèrement votre visage vers la gauche.",
+    "move_right": "Déplacez légèrement votre visage vers la droite.",
+    "move_closer": "Rapprochez-vous de la caméra.",
+    "move_back": "Éloignez-vous un peu de la caméra.",
+    "face_centered": "Parfait ! Restez immobile.",
+    "liveness_prompt": "Veuillez prononcer à voix haute le code à quatre chiffres : {otp}",
+    "liveness_passed": "Présence confirmée ! Merci.",
+    "id_scan_start": "Veuillez tenir votre carte d'identité à plat devant la caméra.",
+    "id_blurry": "L'image est floue. Veuillez garder la carte immobile.",
+    "id_captured": "Carte d'identité capturée et chiffrée en toute sécurité.",
+    "atm_code": "Votre code de retrait sans carte est {code}. Il expire dans dix minutes."
+}
