@@ -22,67 +22,19 @@ HTML_DASHBOARD = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EchoKYC Global — Zero-Barrier Voice Banking & Identity</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #0b0f19;
-            color: #ffffff;
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        header {
-            background: #111827;
-            border: 2px solid #facc15;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-        }
+        body { font-family: Arial, sans-serif; background: #0b0f19; color: #fff; margin: 0; padding: 20px; line-height: 1.6; }
+        header { background: #111827; border: 2px solid #facc15; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
         h1 { color: #facc15; margin: 0 0 8px 0; font-size: 1.8rem; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-        }
-        .card {
-            background: #1f2937;
-            border: 2px solid #374151;
-            border-radius: 12px;
-            padding: 20px;
-        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .card { background: #1f2937; border: 2px solid #374151; border-radius: 12px; padding: 20px; }
         .card h2 { color: #facc15; margin-top: 0; font-size: 1.3rem; }
         label { display: block; margin-top: 10px; font-weight: bold; }
-        input, select, button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 6px;
-            border-radius: 8px;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
-        input, select {
-            background: #111827;
-            color: #ffffff;
-            border: 1px solid #6b7280;
-        }
-        button {
-            background: #facc15;
-            color: #000000;
-            font-weight: bold;
-            border: none;
-            cursor: pointer;
-            margin-top: 14px;
-        }
+        input, select, button { width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+        input, select { background: #111827; color: #fff; border: 1px solid #6b7280; }
+        button { background: #facc15; color: #000; font-weight: bold; border: none; cursor: pointer; margin-top: 14px; }
         button:hover { background: #eab308; }
-        button.danger { background: #ef4444; color: #ffffff; }
-        .status-box {
-            margin-top: 24px;
-            background: #111827;
-            border: 2px solid #10b981;
-            padding: 18px;
-            border-radius: 10px;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
+        button.danger { background: #ef4444; color: #fff; }
+        .status-box { margin-top: 24px; background: #111827; border: 2px solid #10b981; padding: 18px; border-radius: 10px; white-space: pre-wrap; font-family: monospace; }
     </style>
 </head>
 <body>
@@ -242,3 +194,20 @@ System Ready. Select any tier above to test EchoKYC Global...
 
 @app.route("/")
 def index():
+    return render_template_string(HTML_DASHBOARD, languages=voice_hub.get_supported_languages())
+
+
+@app.route("/api/set_language", methods=["POST"])
+def set_language():
+    data = request.get_json()
+    lang = data.get("lang", "en")
+    voice_hub.set_language(lang)
+    cash_engine.voice.set_language(lang)
+    voice_hub.speak("welcome", cooldown=0)
+    return jsonify({"status": "Language updated", "active_language": lang})
+
+
+@app.route("/api/tier1/start", methods=["POST"])
+def start_tier1():
+    data = request.get_json()
+    user_id = data.get("user_id", "NG_USER_101")
