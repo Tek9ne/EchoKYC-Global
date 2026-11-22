@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+master_bank.key
+encrypted_vault/
+*.db
+temp_*.jpg
+.env

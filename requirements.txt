@@ -1,0 +1,10 @@
+opencv-python
+mediapipe
+easyocr
+pyttsx3
+sounddevice
+flask
+cryptography
+qrcode
+pillow
+numpy
