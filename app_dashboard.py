@@ -1,4 +1,8 @@
+from cardless_cash_engine import CardlessCashEngine, resolve_pos_identity
+import os
+import json
 import threading
+import urllib.request
 from flask import Flask, render_template_string, request, jsonify
 
 from languages import VoiceEngine
@@ -62,10 +66,12 @@ HTML_DASHBOARD = """
         </section>
         <section class="card">
             <h2>Cardless ATM & POS (Offline)</h2>
+            <input type="text" id="agentName" placeholder="POS Merchant Name (Auto-Locates Online)" aria-label="POS Merchant Name">
+            <input type="number" id="amt" value="5000" aria-label="Amount in Naira">
             <input type="number" id="amt" value="5000">
             <select id="offMode"><option value="false">Online Live Sync</option><option value="true">Zero-Data Offline Mode</option></select>
             <button onclick="postApi('/api/cash/atm', {user_id: document.getElementById('t3User').value, amount_ngn: Number(document.getElementById('amt').value), force_offline: document.getElementById('offMode').value === 'true'})">Generate 10-Min ATM Code</button>
-            <button onclick="postApi('/api/cash/pos', {user_id: document.getElementById('t3User').value, agent_name: 'Bukuru POS', amount_ngn: Number(document.getElementById('amt').value), force_offline: document.getElementById('offMode').value === 'true'})">Test POS Audio Shield</button>
+            <button onclick="postApi('/api/cash/pos', {user_id: document.getElementById('t3User').value, agent_name: document.getElementById('agentName').value, amount_ngn: Number(document.getElementById('amt').value), force_offline: document.getElementById('offMode').value === 'true'})">Test POS Audio Shield</button>
             <button onclick="postApi('/api/offline/sync', {})">Sync Offline Outbox</button>
         </section>
     </main>
@@ -143,7 +149,12 @@ def cash_atm():
 @app.route("/api/cash/pos", methods=["POST"])
 def cash_pos():
     d = request.get_json()
-    return jsonify(cash_engine.authorize_pos_withdrawal(d.get("user_id", "NG_USER_101"), d.get("agent_name", "POS Agent"), int(d.get("amount_ngn", 3000)), True, bool(d.get("force_offline", False))))
+    amt = int(d.get("amount_ngn", 3000))
+    client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "")
+    agent = resolve_pos_identity(client_ip, d.get("agent_name", ""))
+    res = cash_engine.authorize_pos_withdrawal(d.get("user_id", "NG_USER_101"), agent, amt, True, bool(d.get("force_offline", False)))
+    res["spoken_prompt"] = f"Attention! {agent} is requesting {amt} Naira. Transaction approved."
+    return jsonify(res)
 
 
 @app.route("/api/offline/sync", methods=["POST"])

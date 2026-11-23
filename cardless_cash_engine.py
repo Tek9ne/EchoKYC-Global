@@ -1,9 +1,31 @@
 import time
+import json
 import random
 import hashlib
+import urllib.request
+
 from languages import VoiceEngine
 from security_vault import SecurityVault
 from offline_sync_engine import OfflineSyncEngine
+
+
+def resolve_pos_identity(client_ip="", custom_name=""):
+    base_name = custom_name.strip() or "EchoKYC Certified POS"
+    ip = (client_ip or "").split(",").strip()
+
+    if not ip or ip.startswith(("127.", "192.168.", "10.", "172.")):
+        return f"{base_name} (Local Terminal)"
+
+    try:
+        url = f"http://ip-api.com{ip}?fields=status,city,country"
+        with urllib.request.urlopen(url, timeout=1.5) as resp:
+            geo = json.loads(resp.read().decode("utf-8"))
+            if geo.get("status") == "success" and geo.get("city"):
+                return f"{base_name} ({geo['city']}, {geo['country']})"
+    except Exception:
+        pass
+
+    return f"{base_name} (Offline Terminal)"
 
 
 class CardlessCashEngine:
@@ -68,7 +90,7 @@ class CardlessCashEngine:
 
     def authorize_pos_withdrawal(self, user_id, agent_name, amount_ngn, user_confirmed=True, force_offline=False):
         consent_prompt = (
-            f"Attention! Agent {agent_name} is requesting a cardless withdrawal of "
+            f"Attention! {agent_name} is requesting a cardless withdrawal of "
             f"{amount_ngn} Naira from your account. Confirming transaction now."
         )
         self.voice.speak_raw(consent_prompt)
@@ -152,6 +174,7 @@ if __name__ == "__main__":
     print("Fraud Block Test:", cash.redeem_atm_paycode(atm_ticket["paycode"], 10000))
     print("Valid ATM Test:", cash.redeem_atm_paycode(atm_ticket["paycode"], 5000))
 
-    pos_tx = cash.authorize_pos_withdrawal("NG_USER_101", "Bukuru Verified POS", 3000, user_confirmed=True, force_offline=True)
+    resolved_agent = resolve_pos_identity(client_ip="127.0.0.1", custom_name="")
+    pos_tx = cash.authorize_pos_withdrawal("NG_USER_101", resolved_agent, 3000, user_confirmed=True, force_offline=True)
     print("POS Result:", pos_tx)
     cash.shutdown()
