@@ -187,3 +187,87 @@ def tier3_revoke():
 def cash_atm():
     d = request.get_json()
     user_id = d.get("user_id", "NG_USER_101")
+    amt = int(d.get("amount_ngn", 5000))
+    res = cash_engine.generate_atm_paycode(user_id, amt, bool(d.get("force_offline", False)))
+    cbn_guard.append_audit_event("ATM_PAYCODE_GENERATED", user_id, {"amount_ngn": amt, "mode": res.get("mode")})
+    if res.get("paycode"):
+        spaced_code = " ".join(str(res["paycode"]))
+        res["spoken_prompt"] = f"Your cardless A T M paycode is {spaced_code}. It expires in ten minutes."
+    return jsonify(res)
+
+
+@app.route("/api/cash/pos", methods=["POST"])
+@cbn_guard.rate_limit(max_requests=15, window_seconds=60)
+def cash_pos():
+    d = request.get_json()
+    user_id = d.get("user_id", "NG_USER_101")
+    amt = int(d.get("amount_ngn", 3000))
+    client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "")
+    agent = resolve_pos_identity(client_ip, d.get("agent_name", ""))
+    res = cash_engine.authorize_pos_withdrawal(
+        user_id=user_id,
+        agent_name=agent,
+        amount_ngn=amt,
+        user_confirmed=True,
+        force_offline=bool(d.get("force_offline", False)),
+        spoken_pin=str(d.get("spoken_pin", ""))
+    )
+    event_label = "SILENT_DURESS_ALERT" if res.get("duress_triggered") else "POS_WITHDRAWAL_ATTEMPT"
+    cbn_guard.append_audit_event(event_label, user_id, {"agent": agent, "amount_ngn": res.get("amount_ngn", amt), "approved": res.get("approved")})
+
+    if res.get("approved"):
+        res["spoken_prompt"] = f"Attention! {agent} is requesting {res['amount_ngn']} Naira. Transaction approved."
+    else:
+        res["spoken_prompt"] = res.get("reason", "Transaction blocked.")
+    return jsonify(res)
+
+
+@app.route("/api/offline/sync", methods=["POST"])
+def offline_sync():
+    sync_out = sync_engine.sync_pending_records()
+    if sync_out.get("synced_count", 0) > 0:
+        cash_engine.offline_spent_ledger.clear()
+    cbn_guard.append_audit_event("OFFLINE_LEDGER_SYNC", "system", sync_out)
+    res = {"sync": sync_out, "summary": sync_engine.get_queue_summary()}
+    res["spoken_prompt"] = sync_out["message"]
+    return jsonify(res)
+
+
+@app.route("/api/audit/verify", methods=["GET"])
+def audit_verify():
+    return jsonify(cbn_guard.verify_audit_chain())
+
+
+@app.route("/api/telco/ussd", methods=["POST"])
+@cbn_guard.rate_limit(max_requests=30, window_seconds=60)
+def telco_ussd_webhook():
+    phone = request.values.get("phoneNumber", "unknown")
+    text = request.values.get("text", "").strip()
+    if text == "":
+        reply = "CON Welcome to EchoKYC Voice Banking\n1. Verify Identity\n2. Cardless ATM Code"
+    elif text == "1":
+        reply = "CON Enter your 4-digit Voice PIN:"
+    elif text.startswith("1*"):
+        cbn_guard.append_audit_event("TELCO_USSD_KYC", phone, {"session_input": "***"})
+        reply = "END Identity Verified! Toll-free voice assistant activated."
+    else:
+        reply = "END Thank you for using EchoKYC Global."
+    return Response(reply, mimetype="text/plain")
+
+
+@app.route("/api/telco/voice", methods=["POST"])
+@cbn_guard.rate_limit(max_requests=30, window_seconds=60)
+def telco_voice_webhook():
+    xml_response = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Response>'
+        '<Say voice="woman">Welcome to Echo K Y C Global. Press 1 on your phone keypad to confirm cardless withdrawal.</Say>'
+        '</Response>'
+    )
+    return Response(xml_response, mimetype="application/xml")
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    print(f"=== EchoKYC Global Server Running at http://127.0.0.1:{port} ===")
+    app.run(host="0.0.0.0", port=port, debug=False)
