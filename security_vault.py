@@ -14,6 +14,10 @@ class SecurityVault:
         self.cipher = self._load_or_create_key()
 
     def _load_or_create_key(self):
+        env_key = os.environ.get("ECHOKYC_MASTER_KEY")
+        if env_key:
+            return Fernet(env_key.encode("utf-8"))
+
         if os.path.exists(self.key_file):
             with open(self.key_file, "rb") as file:
                 key = file.read()
@@ -22,6 +26,7 @@ class SecurityVault:
             with open(self.key_file, "wb") as file:
                 file.write(key)
         return Fernet(key)
+
 
     def encrypt_and_shred_file(self, raw_file_path, user_id, doc_type):
         if not os.path.exists(raw_file_path):
