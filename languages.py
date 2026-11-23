@@ -5,6 +5,11 @@ import threading
 import time
 import pyttsx3
 
+try:
+    import winsound
+except ImportError:
+    winsound = None
+
 DEFAULT_LOCALES = {
     "en": {
         "language_name": "English",
@@ -112,8 +117,9 @@ DEFAULT_LOCALES = {
 
 
 class VoiceEngine:
-    def __init__(self, lang="en", rate=160, locales_dir="locales"):
+    def __init__(self, lang="en", rate=160, locales_dir="locales", audio_dir="audio_locales"):
         self.locales_dir = locales_dir
+        self.audio_dir = audio_dir
         self.translations = {}
         self._initialize_locales()
 
@@ -129,7 +135,9 @@ class VoiceEngine:
 
     def _initialize_locales(self):
         os.makedirs(self.locales_dir, exist_ok=True)
+        os.makedirs(self.audio_dir, exist_ok=True)
         for code, phrases in DEFAULT_LOCALES.items():
+            os.makedirs(os.path.join(self.audio_dir, code), exist_ok=True)
             file_path = os.path.join(self.locales_dir, f"{code}.json")
             if not os.path.exists(file_path):
                 with open(file_path, "w", encoding="utf-8") as f:
@@ -163,15 +171,21 @@ class VoiceEngine:
         engine = pyttsx3.init()
         engine.setProperty("rate", self.rate)
 
-
         while self.is_running:
             try:
-                text_to_speak = self.speech_queue.get(timeout=0.5)
-                if text_to_speak is None:
+                item = self.speech_queue.get(timeout=0.5)
+                if item is None:
                     break
-                print(f"[VOICE - {self.lang.upper()}]: {text_to_speak}")
-                engine.say(text_to_speak)
-                engine.runAndWait()
+
+                wav_path, text_to_speak = item
+                if wav_path and os.path.exists(wav_path) and winsound is not None:
+                    print(f"[NATIVE AUDIO - {self.lang.upper()}]: Playing {wav_path}")
+                    winsound.PlaySound(wav_path, winsound.SND_FILENAME)
+                else:
+                    print(f"[TTS VOICE - {self.lang.upper()}]: {text_to_speak}")
+                    engine.say(text_to_speak)
+                    engine.runAndWait()
+
                 self.speech_queue.task_done()
             except queue.Empty:
                 continue
@@ -184,27 +198,3 @@ class VoiceEngine:
             return
 
         current_dict = self.translations.get(self.lang, self.translations["en"])
-        phrase_template = current_dict.get(key) or self.translations["en"].get(key, key)
-        final_message = phrase_template.format(**kwargs) if kwargs else phrase_template
-
-        self.last_spoken_key = key
-        self.last_spoken_time = now
-        self.speech_queue.put(final_message)
-
-    def speak_raw(self, raw_text):
-        self.speech_queue.put(raw_text)
-
-    def stop(self):
-        self.is_running = False
-        self.speech_queue.put(None)
-        self.worker_thread.join(timeout=2)
-
-
-if __name__ == "__main__":
-    voice = VoiceEngine(lang="en")
-    print("Loaded Locales:", voice.get_supported_languages())
-    for code in ["en", "pcm", "ha", "yo", "ig", "fr"]:
-        voice.set_language(code)
-        voice.speak("welcome", cooldown=0)
-        time.sleep(4.5)
-    voice.stop()
