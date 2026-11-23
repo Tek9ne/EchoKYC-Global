@@ -196,5 +196,15 @@ class VoiceEngine:
         now = time.time()
         if key == self.last_spoken_key and (now - self.last_spoken_time) < cooldown:
             return
-
+        
         current_dict = self.translations.get(self.lang, self.translations["en"])
+
+    def speak_raw(self, raw_text):
+        self.speech_queue.put((None, raw_text))
+
+    def stop(self):
+        self.is_running = False
+        self.speech_queue.put(None)
+        self.worker_thread.join(timeout=2)
+
+

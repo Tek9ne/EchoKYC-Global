@@ -11,7 +11,9 @@ from offline_sync_engine import OfflineSyncEngine
 
 def resolve_pos_identity(client_ip="", custom_name=""):
     base_name = custom_name.strip() or "EchoKYC Certified POS"
-    ip = (client_ip or "").split(",").strip()
+    first_ip, _, _ = (client_ip or "").partition(",")
+    ip = first_ip.strip()
+
 
     if not ip or ip.startswith(("127.", "192.168.", "10.", "172.")):
         return f"{base_name} (Local Terminal)"
