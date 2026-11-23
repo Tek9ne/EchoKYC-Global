@@ -3,12 +3,21 @@ import json
 import queue
 import threading
 import time
-import pyttsx3
+
+try:
+    import pyttsx3
+    HAS_PYTTSX3 = True
+except Exception:
+    pyttsx3 = None
+    HAS_PYTTSX3 = False
 
 try:
     import winsound
+    HAS_WINSOUND = True
 except ImportError:
     winsound = None
+    HAS_WINSOUND = False
+
 
 DEFAULT_LOCALES = {
     "en": {
@@ -168,8 +177,14 @@ class VoiceEngine:
         except Exception:
             pass
 
-        engine = pyttsx3.init()
-        engine.setProperty("rate", self.rate)
+        engine = None
+        if HAS_PYTTSX3 and pyttsx3 is not None:
+            try:
+                engine = pyttsx3.init()
+                engine.setProperty("rate", self.rate)
+            except Exception as init_err:
+                print(f"[CLOUD HEADLESS AUDIO]: Local TTS disabled ({init_err})")
+                engine = None
 
         while self.is_running:
             try:
@@ -178,14 +193,16 @@ class VoiceEngine:
                     break
 
                 wav_path, text_to_speak = item
-                if wav_path and os.path.exists(wav_path) and winsound is not None:
+                if wav_path and os.path.exists(wav_path) and HAS_WINSOUND and winsound is not None:
                     print(f"[NATIVE AUDIO - {self.lang.upper()}]: Playing {wav_path}")
                     winsound.PlaySound(wav_path, winsound.SND_FILENAME)
-                else:
+                elif engine is not None:
                     print(f"[TTS VOICE - {self.lang.upper()}]: {text_to_speak}")
                     engine.say(text_to_speak)
                     engine.runAndWait()
-
+                else:
+                    print(f"[CLOUD VOICE LOG - {self.lang.upper()}]: {text_to_speak}")
+                
                 self.speech_queue.task_done()
             except queue.Empty:
                 continue
@@ -196,15 +213,22 @@ class VoiceEngine:
         now = time.time()
         if key == self.last_spoken_key and (now - self.last_spoken_time) < cooldown:
             return
-        
+
         current_dict = self.translations.get(self.lang, self.translations["en"])
+        template = current_dict.get(key, self.translations["en"].get(key, key))
+        text_to_speak = template.format(**kwargs) if kwargs else template
+        wav_path = os.path.join(self.audio_dir, self.lang, f"{key}.wav")
+
+        self.last_spoken_key = key
+        self.last_spoken_time = now
+        self.speech_queue.put((wav_path, text_to_speak))
 
     def speak_raw(self, raw_text):
         self.speech_queue.put((None, raw_text))
 
     def stop(self):
         self.is_running = False
+        self.speech_queue.queue.clear()
         self.speech_queue.put(None)
-        self.worker_thread.join(timeout=2)
-
-
+        if self.worker_thread.is_alive():
+            self.worker_thread.join(timeout=2)

@@ -6,3 +6,4 @@ encrypted_vault/
 *.db
 temp_*.jpg
 .env
+*.jsonl

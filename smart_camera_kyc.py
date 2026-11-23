@@ -2,8 +2,14 @@ import time
 import random
 import cv2
 import numpy as np
-import sounddevice as sd
 import easyocr
+
+try:
+    import sounddevice as sd
+    HAS_AUDIO_HARDWARE = True
+except Exception:
+    sd = None
+    HAS_AUDIO_HARDWARE = False
 
 from languages import VoiceEngine
 from security_vault import SecurityVault
@@ -26,17 +32,21 @@ class SmartCameraKYC:
 
     def check_ambient_noise(self, duration=1.5, sample_rate=16000, threshold_db=68.0):
         try:
-            audio = sd.rec(
-                int(duration * sample_rate),
-                samplerate=sample_rate,
-                channels=1,
-                dtype="float32"
-            )
-            sd.wait()
-            rms = np.sqrt(np.mean(np.square(audio)))
-            decibels = 20 * np.log10(max(rms, 1e-7)) + 90
+            if not HAS_AUDIO_HARDWARE or sd is None:
+                # Cloud / headless server: no physical mic, default to lip-tracking mode
+                decibels = 72.0
+            else:
+                audio = sd.rec(
+                    int(duration * sample_rate),
+                    samplerate=sample_rate,
+                    channels=1,
+                    dtype="float32"
+                )
+                sd.wait()
+                rms = np.sqrt(np.mean(np.square(audio)))
+                decibels = 20 * np.log10(max(rms, 1e-7)) + 90
         except Exception:
-            decibels = 50.0
+            decibels = 72.0
 
         is_noisy = decibels > threshold_db
         if is_noisy:
