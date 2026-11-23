@@ -68,10 +68,11 @@ HTML_DASHBOARD = """
             <h2>Cardless ATM & POS (Offline)</h2>
             <input type="text" id="agentName" placeholder="POS Merchant Name (Auto-Locates Online)" aria-label="POS Merchant Name">
             <input type="number" id="amt" value="5000" aria-label="Amount in Naira">
-            <input type="number" id="amt" value="5000">
+            <input type="password" id="posPin" value="4829" placeholder="PIN (4829 Normal / 9911 Duress)" aria-label="Transaction PIN">
+            <select id="offMode" aria-label="Network Mode"><option value="false">Online Live Sync</option><option value="true">Zero-Data Offline Mode</option></select>
             <select id="offMode"><option value="false">Online Live Sync</option><option value="true">Zero-Data Offline Mode</option></select>
             <button onclick="postApi('/api/cash/atm', {user_id: document.getElementById('t3User').value, amount_ngn: Number(document.getElementById('amt').value), force_offline: document.getElementById('offMode').value === 'true'})">Generate 10-Min ATM Code</button>
-            <button onclick="postApi('/api/cash/pos', {user_id: document.getElementById('t3User').value, agent_name: document.getElementById('agentName').value, amount_ngn: Number(document.getElementById('amt').value), force_offline: document.getElementById('offMode').value === 'true'})">Test POS Audio Shield</button>
+            <button onclick="postApi('/api/cash/pos', {user_id: document.getElementById('t3User').value, agent_name: document.getElementById('agentName').value, amount_ngn: Number(document.getElementById('amt').value), spoken_pin: document.getElementById('posPin').value, force_offline: document.getElementById('offMode').value === 'true'})">Test POS Audio Shield</button>
             <button onclick="postApi('/api/offline/sync', {})">Sync Offline Outbox</button>
         </section>
     </main>
@@ -152,14 +153,29 @@ def cash_pos():
     amt = int(d.get("amount_ngn", 3000))
     client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "")
     agent = resolve_pos_identity(client_ip, d.get("agent_name", ""))
-    res = cash_engine.authorize_pos_withdrawal(d.get("user_id", "NG_USER_101"), agent, amt, True, bool(d.get("force_offline", False)))
-    res["spoken_prompt"] = f"Attention! {agent} is requesting {amt} Naira. Transaction approved."
+    res = cash_engine.authorize_pos_withdrawal(
+        user_id=d.get("user_id", "NG_USER_101"),
+        agent_name=agent,
+        amount_ngn=amt,
+        user_confirmed=True,
+        force_offline=bool(d.get("force_offline", False)),
+        spoken_pin=str(d.get("spoken_pin", ""))
+    )
+    if res.get("approved"):
+        res["spoken_prompt"] = f"Attention! {agent} is requesting {res['amount_ngn']} Naira. Transaction approved."
+    else:
+        res["spoken_prompt"] = res.get("reason", "Transaction blocked.")
     return jsonify(res)
 
 
 @app.route("/api/offline/sync", methods=["POST"])
 def offline_sync():
-    return jsonify({"sync": sync_engine.sync_pending_records(), "summary": sync_engine.get_queue_summary()})
+    sync_out = sync_engine.sync_pending_records()
+    if sync_out.get("synced_count", 0) > 0:
+        cash_engine.offline_spent_ledger.clear()
+    res = {"sync": sync_out, "summary": sync_engine.get_queue_summary()}
+    res["spoken_prompt"] = sync_out["message"]
+    return jsonify(res)
 
 
 if __name__ == "__main__":

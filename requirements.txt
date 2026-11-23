@@ -1,4 +1,4 @@
-opencv-python
+opencv-python-headless
 mediapipe
 easyocr
 pyttsx3
@@ -8,3 +8,4 @@ cryptography
 qrcode
 pillow
 numpy
+gunicorn
